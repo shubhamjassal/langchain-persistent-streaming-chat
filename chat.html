@@ -1,0 +1,1496 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persistent Streaming AI Chat</title>
+
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 280px;
+    min-width: 280px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+
+    background: #f7f7f8;
+    border-right: 1px solid #ddd;
+    padding: 20px 14px;
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    overflow-y: auto;
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+    padding: 30px;
+    max-width: 950px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.sidebar button {
+    box-sizing: border-box;
+}
+
+.sidebar > button,
+.sidebar-actions button {
+    width: 100%;
+}
+
+.sidebar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#recent-conversations-section {
+    margin-top: 8px;
+    flex: 0 0 auto;
+    min-height: 0;
+}
+
+#recent-conversations-list {
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.recent-conversation-item {
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+.recent-conversation-item.selected {
+    background-color: #e8f0fe;
+    font-weight: bold;
+    border-left: 4px solid #2563eb;
+}
+
+#load-more-button {
+    width: 100%;
+}
+
+@media (max-width: 700px) {
+    .app-shell {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        min-width: 0;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+    }
+
+    #recent-conversations-list {
+        max-height: 250px;
+    }
+
+    .main-content {
+        padding: 20px 14px;
+    }
+}
+        select, textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            margin-top: 8px;
+        }
+
+        textarea {
+            min-height: 90px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+        }
+
+        button:disabled, select:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        #messages {
+            margin-top: 20px;
+        }
+
+        .message {
+            margin: 12px 0;
+            padding: 14px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .user-message {
+            background: #e0edff;
+        }
+
+        .assistant-message {
+            background: #f3f4f6;
+        }
+
+        #status {
+            color: #555;
+            margin-top: 12px;
+        }
+
+#conversation-search-container {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+#conversation-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    margin-top: 8px;
+}
+
+#conversation-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    max-height: 260px;
+    overflow-y: auto;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.conversation-result {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 12px;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #eee;
+    background: white;
+    cursor: pointer;
+}
+
+.conversation-result:hover,
+.conversation-result.active {
+    background: #e8f0fe;
+}
+
+.conversation-result-title {
+    font-weight: bold;
+    display: block;
+}
+
+.conversation-result-id {
+    color: #666;
+    font-size: 12px;
+    display: block;
+    margin-top: 4px;
+}
+
+.conversation-no-results {
+    padding: 12px;
+    color: #666;
+}
+
+#recent-conversations-section {
+    margin-top: 20px;
+}
+
+#recent-conversations-section h3 {
+    margin-bottom: 10px;
+}
+
+#recent-conversations-list {
+    max-height: 55vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.recent-conversation-item {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 12px;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #eee;
+    background: white;
+    cursor: pointer;
+}
+
+.recent-conversation-item:last-child {
+    border-bottom: none;
+}
+
+.recent-conversation-item:hover {
+    background: #f3f4f6;
+}
+
+.recent-conversation-item.selected {
+    background: #e8f0fe;
+    font-weight: bold;
+}
+
+.recent-conversation-empty {
+    padding: 12px;
+    color: #666;
+}
+
+.recent-conversation-item.selected {
+    background-color: #e8f0fe;
+    font-weight: bold;
+    border-left: 4px solid #2563eb;
+}
+
+.recent-conversation-item {
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+}
+
+.search-load-more {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 12px;
+    border: none;
+    border-top: 1px solid #ddd;
+    background: #f7f7f8;
+    cursor: pointer;
+}
+
+.search-load-more:hover {
+    background: #e8f0fe;
+}
+
+.search-load-more:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+    </style>
+
+
+</head>
+
+<body>
+
+    <div class="app-shell">
+
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar">
+
+            <button id="new-chat-button" type="button">
+                + New Chat
+            </button>
+
+            <!-- Conversation Search -->
+            <div id="conversation-search-container">
+
+                <label for="conversation-search">
+                    Search conversations
+                </label>
+
+                <input
+                    type="search"
+                    id="conversation-search"
+                    placeholder="Search conversations..."
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded="false"
+                    aria-controls="conversation-results"
+                    autocomplete="off"
+                >
+
+                <div
+                    id="conversation-results"
+                    role="listbox"
+                    aria-label="Matching conversations"
+                    hidden
+                ></div>
+
+            </div>
+
+            <!-- Recent Conversations -->
+            <section id="recent-conversations-section">
+
+                <h3>Recent Conversations</h3>
+
+                <div id="recent-conversations-list"></div>
+
+            </section>
+
+            <!-- Pagination -->
+            <button
+                id="load-more-button"
+                type="button"
+                hidden
+            >
+                Load More Conversations
+            </button>
+
+            <!-- Retained for existing JavaScript compatibility -->
+            <select id="conversation-select" hidden disabled>
+            </select>
+
+            <!-- Conversation Actions -->
+            <div class="sidebar-actions">
+
+                <button
+                    id="rename-chat-button"
+                    type="button"
+                    disabled
+                >
+                    Rename Conversation
+                </button>
+
+                <button
+                    id="delete-chat-button"
+                    type="button"
+                    disabled
+                >
+                    Delete Conversation
+                </button>
+
+            </div>
+
+        </aside>
+
+
+        <!-- RIGHT CHAT AREA -->
+        <main class="main-content">
+
+            <h1>Persistent Streaming AI Chat</h1>
+
+            <p id="status" role="status">
+                Connecting to the API...
+            </p>
+
+            <div id="messages" aria-live="polite"></div>
+
+            <form id="chat-form">
+
+                <textarea
+                    id="question"
+                    placeholder="Ask a question..."
+                    required
+                ></textarea>
+
+                <button
+                    id="submit-button"
+                    type="submit"
+                >
+                    Ask AI
+                </button>
+
+                <button
+                    id="stop-button"
+                    type="button"
+                    disabled
+                >
+                    Stop Generation
+                </button>
+
+            </form>
+
+        </main>
+
+    </div>
+
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+
+        const form = document.getElementById("chat-form");
+        const questionInput = document.getElementById("question");
+        const submitButton = document.getElementById("submit-button");
+        const newChatButton = document.getElementById("new-chat-button");
+        const renameChatButton =document.getElementById("rename-chat-button");
+        const deleteChatButton =document.getElementById("delete-chat-button");
+        const stopButton = document.getElementById("stop-button");
+        const conversationSelect =document.getElementById("conversation-select");
+        const conversationSearch =document.getElementById("conversation-search");
+
+        let allConversations = [];
+        const PAGE_SIZE = 20;
+
+        let nextOffset = 0;
+        let hasMoreConversations = false;
+        let isLoadingMore = false;
+
+        const loadMoreButton =
+            document.getElementById("load-more-button");
+        const conversationResults =
+    document.getElementById("conversation-results");
+    const recentConversationsList =
+    document.getElementById("recent-conversations-list");
+
+const conversationSearchContainer =
+    document.getElementById("conversation-search-container");
+
+let highlightedResultIndex = -1;
+let visibleResults = [];
+
+let searchDebounceTimer = null;
+let searchRequestId = 0;
+
+let searchOffset = 0;
+let hasMoreSearchResults = false;
+let isLoadingMoreSearchResults = false;
+
+        const messagesElement = document.getElementById("messages");
+        const statusElement = document.getElementById("status");
+
+        let conversationId = null;
+        let activeController = null;
+        let activeConversationDetails = null;
+
+        function addMessage(role, content) {
+            const element = document.createElement("div");
+
+            element.className = role === "user"
+                ? "message user-message"
+                : "message assistant-message";
+
+            element.textContent =
+                `${role === "user" ? "You" : "AI"}: ${content}`;
+
+            messagesElement.appendChild(element);
+            return element;
+        }
+
+        function stopActiveRequest() {
+            if (activeController) {
+                const controller = activeController;
+                activeController = null;
+                controller.abort();
+            }
+
+            submitButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+async function fetchConversations(
+    limit = PAGE_SIZE,
+    offset = 0,
+    searchQuery = ""
+) {
+    const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+    });
+
+    if (searchQuery.trim()) {
+        params.set("search", searchQuery.trim());
+    }
+
+    const response = await fetch(
+        `${API_URL}/conversations?${params.toString()}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Could not load saved conversations.");
+    }
+
+    return await response.json();
+}
+
+async function refreshConversationList() {
+    allConversations = [];
+    nextOffset = 0;
+    hasMoreConversations = false;
+
+    const page = await fetchConversations(PAGE_SIZE, 0);
+
+    allConversations.push(...page.conversations);
+    nextOffset = page.conversations.length;
+    hasMoreConversations = page.has_more;
+
+    renderConversationList();
+}
+
+
+async function loadMoreConversations() {
+    if (!hasMoreConversations || isLoadingMore) {
+        return;
+    }
+
+    isLoadingMore = true;
+    loadMoreButton.disabled = true;
+    loadMoreButton.textContent = "Loading...";
+
+    try {
+        const page = await fetchConversations(
+            PAGE_SIZE,
+            nextOffset
+        );
+
+        // Avoid duplicate conversations.
+        const existingIds = new Set(
+            allConversations.map(conversation => conversation.id)
+        );
+
+        const newConversations = page.conversations.filter(
+            conversation => !existingIds.has(conversation.id)
+        );
+
+        allConversations.push(...newConversations);
+
+        nextOffset += page.conversations.length;
+        hasMoreConversations = page.has_more;
+
+        renderConversationList();
+
+    } catch (error) {
+        statusElement.textContent =
+            `Could not load more conversations: ${error.message}`;
+
+    } finally {
+        isLoadingMore = false;
+
+        loadMoreButton.textContent =
+            "Load More Conversations";
+
+        loadMoreButton.disabled = false;
+        loadMoreButton.hidden = !hasMoreConversations;
+    }
+}
+
+
+
+function renderConversationList() {
+    conversationSelect.replaceChildren();
+
+    // Keep loaded conversations available to existing JS.
+    for (const conversation of allConversations) {
+        const option = document.createElement("option");
+        option.value = conversation.id;
+        option.textContent = conversation.title;
+
+        conversationSelect.appendChild(option);
+    }
+    // Preserve the active conversation even when it is
+// outside the currently loaded recent-conversation pages.
+if (
+    conversationId &&
+    !allConversations.some(
+        conversation => conversation.id === conversationId
+    ) &&
+    activeConversationDetails?.id === conversationId
+) {
+    const option = document.createElement("option");
+    option.value = activeConversationDetails.id;
+    option.textContent = activeConversationDetails.title;
+
+    conversationSelect.appendChild(option);
+}
+
+    conversationSelect.value = conversationId || "";
+
+    // Render the recent conversations independently of search.
+    recentConversationsList.replaceChildren();
+
+    if (allConversations.length === 0) {
+        const message = document.createElement("div");
+        message.className = "recent-conversation-empty";
+        message.textContent = "No conversations yet.";
+
+        recentConversationsList.appendChild(message);
+    } else {
+        for (const conversation of allConversations) {
+            const button = document.createElement("button");
+
+            button.type = "button";
+            button.className = "recent-conversation-item";
+            button.textContent = conversation.title;
+
+            if (conversation.id === conversationId) {
+                button.classList.add("selected");
+            }
+
+            button.addEventListener("click", () => {
+                conversationSelect.value = conversation.id;
+
+                conversationSelect.dispatchEvent(
+                    new Event("change")
+                );
+            });
+
+            recentConversationsList.appendChild(button);
+        }
+    }
+
+    // Pagination belongs to the recent list, not search results.
+    loadMoreButton.hidden = !hasMoreConversations;
+    loadMoreButton.disabled = isLoadingMore;
+}
+
+function renderSearchResults() {
+    conversationResults.replaceChildren();
+
+    highlightedResultIndex = -1;
+
+    if (visibleResults.length === 0) {
+        const message = document.createElement("div");
+        message.className = "conversation-no-results";
+        message.textContent = "No matching conversations found.";
+
+        conversationResults.appendChild(message);
+    } else {
+        visibleResults.forEach((conversation, index) => {
+            const button = document.createElement("button");
+
+            button.type = "button";
+            button.className = "conversation-result";
+            button.setAttribute("role", "option");
+            button.setAttribute("aria-selected", "false");
+
+            const title = document.createElement("span");
+            title.className = "conversation-result-title";
+            title.textContent = conversation.title;
+
+            const id = document.createElement("span");
+            id.className = "conversation-result-id";
+            id.textContent = conversation.id.slice(0, 8);
+
+            button.append(title, id);
+
+            button.addEventListener("click", () => {
+                selectSearchResult(index);
+            });
+
+            conversationResults.appendChild(button);
+        });
+    }
+
+    // Add a separate pagination control for search results.
+    if (hasMoreSearchResults) {
+        const loadMoreSearchButton = document.createElement("button");
+
+        loadMoreSearchButton.type = "button";
+        loadMoreSearchButton.className = "search-load-more";
+        loadMoreSearchButton.textContent =
+            isLoadingMoreSearchResults
+                ? "Loading..."
+                : "Load More Results";
+
+        loadMoreSearchButton.disabled = isLoadingMoreSearchResults;
+
+        loadMoreSearchButton.addEventListener(
+            "click",
+            loadMoreSearchResults
+        );
+
+        conversationResults.appendChild(loadMoreSearchButton);
+    }
+
+    conversationResults.hidden = false;
+
+    conversationSearch.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+}
+async function loadMoreSearchResults() {
+    if (
+        !hasMoreSearchResults ||
+        isLoadingMoreSearchResults
+    ) {
+        return;
+    }
+
+  const searchTerm = conversationSearch.value.trim();
+
+    if (!searchTerm) {
+        return;
+    }
+
+    const requestId = searchRequestId;
+
+    isLoadingMoreSearchResults = true;
+    renderSearchResults();
+
+    try {
+        const page = await fetchConversations(
+            PAGE_SIZE,
+            searchOffset,
+            searchTerm
+        );
+
+        // Ignore results if the user has changed the search.
+        if (requestId !== searchRequestId) {
+            return;
+        }
+
+        const existingIds = new Set(
+            visibleResults.map(conversation => conversation.id)
+        );
+
+        const newResults = page.conversations.filter(
+            conversation => !existingIds.has(conversation.id)
+        );
+
+        visibleResults.push(...newResults);
+
+        searchOffset += page.conversations.length;
+        hasMoreSearchResults = page.has_more;
+
+    } catch (error) {
+        if (requestId === searchRequestId) {
+            statusElement.textContent =
+                `Could not load more search results: ${error.message}`;
+        }
+
+    } finally {
+        if (requestId === searchRequestId) {
+            isLoadingMoreSearchResults = false;
+            renderSearchResults();
+        }
+    }
+}
+
+
+function selectSearchResult(index) {
+    const conversation = visibleResults[index];
+
+    if (!conversation) {
+        return;
+    }
+
+    // Preserve the selected conversation's details.
+    activeConversationDetails = conversation;
+
+    // Add the conversation to the hidden select if necessary.
+    let option = Array.from(conversationSelect.options).find(
+        item => item.value === conversation.id
+    );
+
+    if (!option) {
+        option = document.createElement("option");
+        option.value = conversation.id;
+        option.textContent = conversation.title;
+
+        conversationSelect.appendChild(option);
+    }
+
+    // Set the selected conversation.
+    conversationSelect.value = conversation.id;
+
+    // Cancel any pending search.
+    clearTimeout(searchDebounceTimer);
+    searchRequestId++;
+
+    // Clear search and close the results panel.
+    conversationSearch.value = "";
+    conversationResults.hidden = true;
+
+    conversationSearch.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    highlightedResultIndex = -1;
+    visibleResults = [];
+
+    // Trigger the existing conversation-loading event.
+    conversationSelect.dispatchEvent(
+        new Event("change")
+    );
+}
+
+
+
+function updateHighlightedResult(index) {
+    const buttons = conversationResults.querySelectorAll(
+        ".conversation-result"
+    );
+
+    if (buttons.length === 0) {
+        return;
+    }
+
+    highlightedResultIndex = Math.max(
+        0,
+        Math.min(index, buttons.length - 1)
+    );
+
+    buttons.forEach((button, buttonIndex) => {
+        const isActive = buttonIndex === highlightedResultIndex;
+
+        button.classList.toggle("active", isActive);
+
+        button.setAttribute(
+            "aria-selected",
+            String(isActive)
+        );
+    });
+
+    buttons[highlightedResultIndex].scrollIntoView({
+        block: "nearest"
+    });
+}
+
+
+
+
+
+async function renameCurrentConversation() {
+    if (!conversationId) {
+        statusElement.textContent = "Select a conversation first.";
+        return;
+    }
+
+    const currentOption = Array.from(conversationSelect.options).find(
+        option => option.value === conversationId
+    );
+
+    if (!currentOption) {
+        statusElement.textContent = "Could not find the selected conversation.";
+        return;
+    }
+
+    const currentTitle = currentOption.textContent.replace(
+        /\s+\([^)]+\)$/,
+        ""
+    );
+
+    const newTitle = window.prompt(
+        "Enter a new conversation title (maximum 60 characters):",
+        currentTitle
+    );
+
+    if (newTitle === null) {
+        return;
+    }
+
+    if (!newTitle.trim()) {
+        statusElement.textContent = "Title cannot be blank.";
+        return;
+    }
+
+    if (newTitle.trim().length > 60) {
+        statusElement.textContent =
+            "Title cannot exceed 60 characters.";
+        return;
+    }
+
+    renameChatButton.disabled = true;
+
+    try {
+        const response = await fetch(
+            `${API_URL}/conversations/${encodeURIComponent(conversationId)}`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    title: newTitle
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Could not rename conversation.");
+        }
+
+        await refreshConversationList(conversationId);
+        renameChatButton.disabled = !conversationId;
+        statusElement.textContent = "Conversation renamed successfully.";
+    } catch (error) {
+        statusElement.textContent = `Rename failed: ${error.message}`;
+    } finally {
+        renameChatButton.disabled = !conversationId;
+    }
+}
+
+async function deleteCurrentConversation() {
+    if (!conversationId) {
+        statusElement.textContent =
+            "Select a conversation first.";
+        return;
+    }
+
+    if (activeController) {
+        statusElement.textContent =
+            "Stop the current generation before deleting.";
+        return;
+    }
+
+    const confirmed = window.confirm(
+        "Are you sure you want to delete this conversation? " +
+        "All its messages will also be permanently deleted."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    const deletedId = conversationId;
+
+    deleteChatButton.disabled = true;
+    renameChatButton.disabled = true;
+
+    try {
+        const response = await fetch(
+            `${API_URL}/conversations/${encodeURIComponent(deletedId)}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Could not delete conversation."
+            );
+        }
+
+        // Find the conversations that remain.
+        const page = await fetchConversations(PAGE_SIZE, 0);
+        const conversations = page.conversations;
+
+        messagesElement.replaceChildren();
+        questionInput.value = "";
+
+        if (conversations.length > 0) {
+            // Select the first remaining conversation.
+            conversationId = conversations[0].id;
+
+            localStorage.setItem(
+                "activeConversationId",
+                conversationId
+            );
+
+            await refreshConversationList(conversationId);
+            await loadConversation(conversationId);
+
+        } else {
+            // Create a fresh conversation if none remain.
+            conversationId = null;
+            localStorage.removeItem("activeConversationId");
+
+            await createConversation();
+        }
+
+        statusElement.textContent =
+            "Conversation deleted successfully.";
+
+    } catch (error) {
+        statusElement.textContent =
+            `Delete failed: ${error.message}`;
+
+    } finally {
+        deleteChatButton.disabled = !conversationId;
+        renameChatButton.disabled = !conversationId;
+    }
+}
+
+
+
+        async function createConversation() {
+            const response = await fetch(`${API_URL}/conversations`, {
+                method: "POST"
+            });
+
+            if (!response.ok) {
+                throw new Error("Could not create a conversation.");
+            }
+
+            const data = await response.json();
+            conversationId = data.conversation_id;
+            renameChatButton.disabled = false;
+            deleteChatButton.disabled = false;
+            localStorage.setItem("activeConversationId", conversationId);
+
+            await refreshConversationList(conversationId);
+
+            messagesElement.replaceChildren();
+            questionInput.value = "";
+            statusElement.textContent = "New conversation ready.";
+        }
+
+        async function loadConversation(id) {
+            const response = await fetch(
+                `${API_URL}/conversations/${encodeURIComponent(id)}/messages`
+            );
+
+            if (!response.ok) {
+                throw new Error("Could not load conversation messages.");
+            }
+
+            const data = await response.json();
+
+            // Ignore stale results if the user switched conversations.
+            if (conversationId !== id) {
+                return;
+            }
+
+            messagesElement.replaceChildren();
+
+            for (const message of data.messages) {
+                addMessage(message.role, message.content);
+            }
+
+            statusElement.textContent = "Conversation loaded.";
+        }
+
+        newChatButton.addEventListener("click", async () => {
+            stopActiveRequest();
+
+            newChatButton.disabled = true;
+            conversationSelect.disabled = true;
+
+            try {
+                await createConversation();
+            } catch (error) {
+                statusElement.textContent = error.message;
+            } finally {
+                newChatButton.disabled = false;
+                conversationSelect.disabled = false;
+            }
+        });
+        renameChatButton.addEventListener(
+    "click",
+    renameCurrentConversation
+);
+
+conversationSearch.addEventListener("input", () => {
+    clearTimeout(searchDebounceTimer);
+
+    // Invalidate any earlier search request.
+    const requestId = ++searchRequestId;
+
+    const searchTerm = conversationSearch.value.trim();
+
+    if (!searchTerm) {
+    visibleResults = [];
+    highlightedResultIndex = -1;
+
+    searchOffset = 0;
+    hasMoreSearchResults = false;
+    isLoadingMoreSearchResults = false;
+
+    conversationResults.replaceChildren();
+    conversationResults.hidden = true;
+
+    conversationSearch.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    renderConversationList();
+    return;
+}
+
+    // Search results have their own list, so hide recent-list pagination.
+    loadMoreButton.hidden = true;
+
+    conversationResults.replaceChildren();
+
+    const loadingMessage = document.createElement("div");
+    loadingMessage.className = "conversation-no-results";
+    loadingMessage.textContent = "Searching...";
+
+    conversationResults.appendChild(loadingMessage);
+    conversationResults.hidden = false;
+
+    conversationSearch.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    searchDebounceTimer = setTimeout(async () => {
+        try {
+            const page = await fetchConversations(
+            PAGE_SIZE,
+            0,
+            searchTerm
+             );
+
+            // Ignore responses belonging to older search terms.
+            if (requestId !== searchRequestId) {
+                return;
+            }
+
+            visibleResults = page.conversations;
+
+            searchOffset = page.conversations.length;
+            hasMoreSearchResults = page.has_more;
+            isLoadingMoreSearchResults = false;
+
+            renderSearchResults();
+
+        } catch (error) {
+            if (requestId !== searchRequestId) {
+                return;
+            }
+
+            conversationResults.replaceChildren();
+
+            const errorMessage = document.createElement("div");
+            errorMessage.className = "conversation-no-results";
+            errorMessage.textContent =
+                `Search failed: ${error.message}`;
+
+            conversationResults.appendChild(errorMessage);
+            conversationResults.hidden = false;
+        }
+    }, 300);
+});
+
+loadMoreButton.addEventListener(
+    "click",
+    loadMoreConversations
+);
+conversationSearch.addEventListener("keydown", event => {
+    if (event.key === "ArrowDown") {
+        event.preventDefault();
+        updateHighlightedResult(
+            highlightedResultIndex + 1);
+} else if (event.key === "ArrowUp") {
+        event.preventDefault();
+
+        updateHighlightedResult(
+            highlightedResultIndex <= 0
+                ? visibleResults.length - 1
+                : highlightedResultIndex - 1
+        );
+
+    } else if (event.key === "Enter") {
+        if (
+            !conversationResults.hidden &&
+            highlightedResultIndex >= 0
+        ) {
+            event.preventDefault();
+            selectSearchResult(highlightedResultIndex);
+        }
+
+    } else if (event.key === "Escape") {
+        conversationResults.hidden = true;
+
+        conversationSearch.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+
+        highlightedResultIndex = -1;
+    }
+});
+
+
+// Close results when clicking outside the search area.
+document.addEventListener("click", event => {
+    if (
+        !conversationSearchContainer.contains(event.target)
+    ) {
+        conversationResults.hidden = true;
+
+        conversationSearch.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+
+        highlightedResultIndex = -1;
+    }
+});
+
+deleteChatButton.addEventListener(
+    "click",
+    deleteCurrentConversation
+);
+        conversationSelect.addEventListener("change", async () => {
+            const selectedId = conversationSelect.value;
+
+            if (!selectedId) {
+                return;
+            }
+
+            stopActiveRequest();
+            conversationId = selectedId;
+
+activeConversationDetails =
+    allConversations.find(
+        conversation => conversation.id === selectedId
+    ) ||
+    (
+        activeConversationDetails?.id === selectedId
+            ? activeConversationDetails
+            : null
+    );
+
+renderConversationList();
+            renameChatButton.disabled = false;
+            deleteChatButton.disabled = false;
+            localStorage.setItem("activeConversationId", selectedId);
+            questionInput.value = "";
+
+            try {
+                await loadConversation(selectedId);
+            } catch (error) {
+                statusElement.textContent = error.message;
+            }
+        });
+
+        stopButton.addEventListener("click", () => {
+            stopActiveRequest();
+            statusElement.textContent = "Generation stopped.";
+
+            // Reload persisted history, excluding an unfinished response.
+            if (conversationId) {
+                loadConversation(conversationId).catch(() => {
+                    statusElement.textContent =
+                        "Generation stopped; could not reload history.";
+                });
+            }
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const question = questionInput.value.trim();
+
+            if (!question) {
+                statusElement.textContent = "Enter a question first.";
+                return;
+            }
+
+            if (!conversationId) {
+                statusElement.textContent =
+                    "Create or select a conversation first.";
+                return;
+            }
+
+            if (activeController) {
+                statusElement.textContent =
+                    "A response is already being generated.";
+                return;
+            }
+
+            const requestConversationId = conversationId;
+            const controller = new AbortController();
+            activeController = controller;
+
+            submitButton.disabled = true;
+            stopButton.disabled = false;
+            newChatButton.disabled = true;
+            conversationSelect.disabled = true;
+
+            addMessage("user", question);
+            const assistantElement = addMessage("assistant", "");
+
+            questionInput.value = "";
+            statusElement.textContent = "Generating answer...";
+
+            let completed = false;
+            let streamError = false;
+
+            try {
+                const response = await fetch(`${API_URL}/ask/stream`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        conversation_id: requestConversationId,
+                        type: "general",
+                        question: question
+                    }),
+                    signal: controller.signal
+                });
+
+                if (!response.ok) {
+                    let detail = `Request failed (${response.status}).`;
+
+                    try {
+                        const data = await response.json();
+                        detail = data.detail || detail;
+                    } catch {
+                        // Keep the generic HTTP error.
+                    }
+
+                    throw new Error(detail);
+                }
+
+                if (!response.body) {
+                    throw new Error("Streaming is not supported.");
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+
+                while (true) {
+                    const { value, done } = await reader.read();
+
+                    if (done) {
+                        buffer += decoder.decode();
+                    } else {
+                        buffer += decoder.decode(value, {
+                            stream: true
+                        });
+                    }
+
+                    const events = buffer.split("\n\n");
+                    buffer = events.pop() ?? "";
+
+                    for (const eventText of events) {
+                        let eventName = "message";
+                        const dataLines = [];
+
+                        for (const line of eventText.split("\n")) {
+                            if (line.startsWith("event:")) {
+                                eventName = line.slice(6).trim();
+                            } else if (line.startsWith("data:")) {
+                                dataLines.push(line.slice(5).trim());
+                            }
+                        }
+
+                        const data = dataLines.join("\n");
+
+                        if (eventName === "token") {
+                            const token = JSON.parse(data);
+                            assistantElement.textContent += token;
+
+                        } else if (eventName === "done") {
+                            completed = true;
+                            statusElement.textContent = "Complete";
+
+                        } else if (eventName === "error") {
+                            const error = JSON.parse(data);
+                            streamError = true;
+                            statusElement.textContent =
+                                error.message || "Streaming failed.";
+                        }
+                    }
+
+                    if (done) {
+                        break;
+                    }
+                }
+
+                if (completed && !streamError) {
+                    statusElement.textContent =
+                        "Response completed and saved.";
+                } else if (!streamError) {
+                    statusElement.textContent =
+                        "Connection ended before completion.";
+                }
+
+            } catch (error) {
+                if (error.name === "AbortError") {
+                    statusElement.textContent = "Generation stopped.";
+                } else {
+                    statusElement.textContent =
+                        `Request failed: ${error.message}`;
+                }
+
+            } finally {
+                if (activeController === controller) {
+                    activeController = null;
+                    submitButton.disabled = false;
+                    stopButton.disabled = true;
+                    newChatButton.disabled = false;
+                    conversationSelect.disabled = false;
+
+                    // The backend is the source of truth. Reload saved
+                    // history to remove any unsaved partial response.
+                    if (conversationId === requestConversationId) {
+                        try {
+                            await loadConversation(requestConversationId);
+                        } catch {
+                            if (completed && !streamError) {
+                                statusElement.textContent =
+                                    "Response finished, but history could not reload.";
+                            }
+                        }
+                    }
+                }
+            }
+        });
+async function initializeChat() {
+    try {
+        const savedId = localStorage.getItem(
+            "activeConversationId"
+        );
+// Load only the first page of recent conversations.
+await refreshConversationList();
+
+        // Retrieve the previously active conversation separately.
+        let savedConversation = null;
+
+        if (savedId) {
+            const response = await fetch(
+                `${API_URL}/conversations/${encodeURIComponent(savedId)}`
+            );
+
+            if (response.ok) {
+                savedConversation = await response.json();
+            }
+        }
+
+        if (allConversations.length === 0 && !savedConversation) {
+            localStorage.removeItem("activeConversationId");
+            await createConversation();
+            return;
+        }
+
+        if (savedConversation) {
+            conversationId = savedConversation.id;
+            activeConversationDetails = savedConversation;
+        } else {
+            conversationId = allConversations[0].id;
+
+            activeConversationDetails = allConversations[0];
+        }
+
+        renderConversationList();
+
+        renameChatButton.disabled = !conversationId;
+        deleteChatButton.disabled = !conversationId;
+
+        await loadConversation(conversationId);
+
+        localStorage.setItem(
+            "activeConversationId",
+            conversationId
+        );
+
+    } catch (error) {
+        statusElement.textContent =
+            `Could not initialize chat: ${error.message}`;
+    }
+}
+
+
+
+        initializeChat();
+    </script>
+</body>
+</html>

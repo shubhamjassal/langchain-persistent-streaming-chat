@@ -1,0 +1,30 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache and test files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+
+# ChromaDB generated data
+chroma_*/
+
+# IDE settings
+.vscode/
+
+# Logs
+*.log
