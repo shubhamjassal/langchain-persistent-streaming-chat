@@ -67,8 +67,8 @@ The repository also contains smaller standalone examples covering prompts, LCEL,
 ### 1. Clone the repository
 
 ```powershell
-git clone https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPOSITORY_NAME.git
-cd YOUR_REPOSITORY_NAME
+git clone https://github.com/shubhamjassal/langchain-persistent-streaming-chat.git
+cd langchain-persistent-streaming-chat
 ```
 
 Replace the repository URL and folder name with the actual GitHub repository details.
