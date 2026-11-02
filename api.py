@@ -217,9 +217,6 @@ def ask_question(request: QuestionRequest):
 
 
 @app.post("/ask/stream")
-
-
-@app.post("/ask/stream")
 def ask_stream(request: ChatRequest):
     question = request.question.strip()
 
